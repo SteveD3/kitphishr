@@ -151,7 +151,7 @@ func getPhishTankURLs() ([]PhishUrls, error) {
 
 func getNewLinksToday() ([]PhishUrls, error) {
 
-	phishfeed := "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-links-NEW-today.txt"
+	phishfeed := "https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/refs/heads/master/phishing-links-NEW-today.txt"
 
 	res, err := http.Get(phishfeed)
 	if err != nil {
@@ -170,28 +170,38 @@ func getNewLinksToday() ([]PhishUrls, error) {
 }
 
 func getPhishStatsInfo() ([]PhishUrls, error) {
+    phishfeed := "https://phishstats.info/phish_score.csv"
+    out := make([]PhishUrls, 0)
 
-	phishfeed := "https://phishstats.info/phish_score.csv"
-	out := make([]PhishUrls, 0)
+    res, err := http.Get(phishfeed)
+    if err != nil {
+        fmt.Println("Error accessing phishstats.info:", err)
+        return out, nil // Return an empty slice and no error to continue
+    }
+    defer res.Body.Close()
 
-	res, err := http.Get(phishfeed)
-	if err != nil {
-		return []PhishUrls{}, err
-	}
+    // Check the status code
+    if res.StatusCode != http.StatusOK {
+        fmt.Printf("phishstats.info returned status: %s\n", res.Status)
+        return out, nil // Return an empty slice and no error to continue
+    }
 
-	defer res.Body.Close()
-	reader := csv.NewReader(res.Body)
-	reader.Comma = ','
-	reader.Comment = '#'
-	data, err := reader.ReadAll()
-	if err != nil {
-		return []PhishUrls{}, err
-	}
+    reader := csv.NewReader(res.Body)
+    reader.Comma = ','
+    reader.Comment = '#'
+    data, err := reader.ReadAll()
+    if err != nil {
+        fmt.Println("Error reading CSV from phishstats.info:", err)
+        return out, nil // Return an empty slice and no error to continue
+    }
 
-	for _, row := range data {
-		out = append(out, PhishUrls{URL: row[2]})
-	}
-	return out, nil
+    for _, row := range data {
+        // Add a check to ensure the row has at least 3 elements
+        if len(row) > 2 {
+            out = append(out, PhishUrls{URL: row[2]})
+        }
+    }
+    return out, nil
 }
 
 /*
